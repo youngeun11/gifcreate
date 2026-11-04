@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>스마트 GIF 생성기 | 국립한국해양대학교</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="logo-link" href="https://www.kmou.ac.kr" target="_blank" rel="noopener noreferrer" aria-label="한국해양대학교 홈페이지로 이동">
+      <img src="assets/kmou-logo.jpg" alt="국립한국해양대학교" class="logo-img" />
+    </a>
+    <h1 class="brand-title">스마트 GIF 생성기</h1>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <h2 class="hero-title" aria-label="Video를 GIF로 변환">
+        <span class="word word-1">Video</span>
+        <span class="word word-2">를</span>
+        <span class="word word-3 accent">GIF</span>
+        <span class="word word-4">로</span>
+        <span class="word word-5">변환</span>
+      </h2>
+      <p class="hero-sub">동영상을 올려 원하는 구간만 잘라 30FPS 이하의 GIF로 만듭니다.</p>
+    </section>
+
+    <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+
+    <section class="panel drop-panel" id="dropPanel">
+      <div class="dropzone" id="dropzone">
+        <input
+          id="fileInput"
+          class="file-overlay"
+          type="file"
+          accept="video/*,.mp4,.webm,.ogg,.ogv,.mov,.m4v,.mpeg,.mpg,.3gp"
+          multiple
+          aria-label="동영상 파일을 선택하거나 끌어다 놓기"
+        />
+        <div class="drop-icon" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="64" height="64">
+            <rect x="8" y="14" width="48" height="36" rx="8" fill="none" stroke="currentColor" stroke-width="2.5"/>
+            <polygon points="24,24 24,40 40,32" fill="currentColor"/>
+            <path d="M20 50 L32 42 L44 50" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p class="drop-title">동영상을 여기에 끌어다 놓거나 클릭해서 선택</p>
+        <p class="drop-hint">지원 형식: MP4, WebM, OGG, MOV, M4V, MPEG, 3GP</p>
+        <span class="btn btn-primary">컴퓨터에서 파일 선택</span>
+      </div>
+    </section>
+
+    <section class="workspace" id="workspace" hidden>
+      <div class="panel editor-panel">
+        <div class="panel-head editor-head">
+          <div>
+            <h3>프레임 구간 선택</h3>
+            <p class="muted" id="sourceName"></p>
+          </div>
+          <button type="button" class="btn btn-ghost" id="closeEditorBtn">목록으로</button>
+        </div>
+        <div class="editor-grid">
+          <div class="preview-wrap">
+            <video id="sourceVideo" playsinline></video>
+            <div class="player-bar">
+              <button type="button" class="play-btn" id="playBtn" aria-label="재생">▶</button>
+              <div class="clip-bar" id="clipBar" role="slider" aria-label="영상 구간 선택 막대">
+                <div class="clip-dim" id="clipDimLeft"></div>
+                <div class="clip-span" id="clipSpan"></div>
+                <div class="clip-dim" id="clipDimRight"></div>
+                <div class="clip-handle" id="startHandle" title="시작"></div>
+                <div class="clip-handle" id="endHandle" title="종료"></div>
+                <div class="playhead" id="playhead"></div>
+              </div>
+            </div>
+          </div>
+          <div class="controls">
+            <p class="clip-time" id="clipTimeLabel">시작 0.00s · 종료 1.00s</p>
+            <p class="muted small">막대의 양 끝을 끌어 어디부터 어디까지 넣을지 정하세요.</p>
+            <label class="field">
+              <span>프레임 속도 (최대 30FPS) <strong id="fpsLabel">12 FPS</strong></span>
+              <input type="range" id="fpsRange" min="1" max="30" step="1" value="12" />
+            </label>
+            <label class="field">
+              <span>가로 크기 <strong id="widthLabel">480px</strong></span>
+              <input type="range" id="widthRange" min="160" max="720" step="16" value="480" />
+            </label>
+            <p class="muted small" id="frameInfo">예상 프레임: -</p>
+            <button type="button" class="btn btn-primary btn-block" id="convertBtn">선택한 구간을 GIF로 변환</button>
+          </div>
+        </div>
+        <div class="progress-block" id="progressBlock" hidden>
+          <div class="progress-meta">
+            <span id="progressText">변환 준비 중</span>
+            <span id="progressPct">0%</span>
+          </div>
+          <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace" id="gifStudio" hidden>
+      <div class="panel">
+        <div class="panel-head editor-head">
+          <div>
+            <h3>GIF 편집</h3>
+            <p class="muted" id="gifEditName"></p>
+          </div>
+          <button type="button" class="btn btn-ghost" id="closeGifStudio">목록으로</button>
+        </div>
+        <div class="gif-edit-grid">
+          <div class="gif-stage">
+            <canvas id="gifCanvas"></canvas>
+          </div>
+          <div class="gif-tools">
+            <div class="tool-row">
+              <button type="button" class="btn btn-ghost" id="undoBtn">직전으로</button>
+              <button type="button" class="btn btn-ghost" id="resetBtn">원본으로</button>
+            </div>
+            <label class="field">
+              <span>픽셀 아트</span>
+              <select id="pixelMode">
+                <option value="none">원본 색감</option>
+                <option value="32bit">32비트 픽셀</option>
+                <option value="16bit">16비트 픽셀</option>
+                <option value="8bit">8비트 픽셀</option>
+                <option value="4bit">4비트 픽셀</option>
+              </select>
+            </label>
+            <div class="text-add">
+              <input id="textInput" type="text" maxlength="40" placeholder="넣을 텍스트" />
+              <input id="textColor" type="color" value="#ffffff" title="글자 색" />
+              <input id="textSize" type="number" min="12" max="96" value="32" title="글자 크기" />
+              <button type="button" class="btn btn-primary" id="addTextBtn">텍스트 추가</button>
+            </div>
+            <p class="tool-label">스티커</p>
+            <div class="sticker-grid" id="stickerGrid"></div>
+            <p class="muted small">항목을 끌어 옮기고, 파란 점을 끌어 크기를 바꾸며, 빨간 ×로 바로 지울 수 있습니다.</p>
+            <button type="button" class="btn btn-ghost" id="deleteOverlayBtn">선택 항목 삭제</button>
+            <button type="button" class="btn btn-primary btn-block" id="saveGifBtn">편집 저장</button>
+            <div class="progress-block" id="gifProgressBlock" hidden>
+              <div class="progress-meta">
+                <span id="gifProgressText">저장 중</span>
+                <span id="gifProgressPct">0%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar" id="gifProgressBar"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="library">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>업로드한 동영상</h3>
+        </div>
+        <div class="card-grid" id="videoLibrary">
+          <p class="empty">아직 업로드한 동영상이 없습니다.</p>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>완료된 GIF</h3>
+          <p class="muted">썸네일을 누르면 크게 볼 수 있습니다.</p>
+        </div>
+        <div class="card-grid" id="gifLibrary">
+          <p class="empty">아직 완성된 GIF가 없습니다.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="lightbox" id="lightbox" hidden>
+    <button type="button" class="lightbox-close" id="lightboxClose" aria-label="닫기">×</button>
+    <img id="lightboxImage" alt="GIF 미리보기" />
+  </div>
+
+  <script src="gif-encoder.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
